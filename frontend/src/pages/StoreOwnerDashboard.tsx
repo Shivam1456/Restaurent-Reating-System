@@ -40,6 +40,41 @@ export const StoreOwnerDashboard: React.FC = () => {
     });
   };
 
+  const renderDistributionChart = () => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    ratings.forEach((r) => {
+      if (r.rating >= 1 && r.rating <= 5) {
+        counts[r.rating as 5 | 4 | 3 | 2 | 1]++;
+      }
+    });
+    const total = ratings.length;
+
+    const data = [5, 4, 3, 2, 1].map((stars) => {
+      const count = counts[stars as 5 | 4 | 3 | 2 | 1];
+      const pct = total > 0 ? (count / total) * 100 : 0;
+      return { stars, count, pct };
+    });
+
+    return (
+      <div className="space-y-3 py-1">
+        {data.map((item) => (
+          <div key={item.stars} className="flex items-center gap-3 text-xs">
+            <span className="font-bold text-slate-400 w-6">{item.stars} ★</span>
+            <div className="flex-1 h-3 bg-slate-950 border border-slate-900 rounded-full overflow-hidden relative">
+              <div 
+                style={{ width: `${item.pct}%` }} 
+                className="h-full bg-amber-500 rounded-full transition-all duration-500" 
+              />
+            </div>
+            <span className="font-semibold text-slate-400 w-16 text-right">
+              {item.count} <span className="text-slate-650">({Math.round(item.pct)}%)</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-slate-950 text-white">
@@ -103,32 +138,40 @@ export const StoreOwnerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Analytics Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Card: Total Ratings */}
-          <div className="bg-slate-900/30 border border-slate-850 p-6 rounded-2xl flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Award size={24} />
+        {/* Analytics Section & Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Card: Total Ratings */}
+            <div className="bg-slate-900/30 border border-slate-855 p-6 rounded-2xl flex flex-col justify-between min-h-[140px] hover:border-slate-800 transition">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Award size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Quality Score</h3>
+                <p className="text-xl font-bold text-white mt-1">
+                  {averageRating >= 4.5 ? 'Excellent ⭐⭐⭐⭐⭐' : averageRating >= 3.5 ? 'Good ⭐⭐⭐⭐' : averageRating > 0 ? 'Needs Work ⭐⭐⭐' : 'No Reviews Yet'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Quality Score</h3>
-              <p className="text-2xl font-bold text-white mt-0.5">
-                {averageRating >= 4.5 ? 'Excellent ⭐⭐⭐⭐⭐' : averageRating >= 3.5 ? 'Good ⭐⭐⭐⭐' : averageRating > 0 ? 'Needs Work ⭐⭐⭐' : 'No Reviews Yet'}
-              </p>
+
+            {/* Card: Latest Review time */}
+            <div className="bg-slate-900/30 border border-slate-855 p-6 rounded-2xl flex flex-col justify-between min-h-[140px] hover:border-slate-800 transition">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <Clock size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Latest Activity</h3>
+                <p className="text-lg font-bold text-white mt-1">
+                  {ratings.length > 0 ? formatDate(ratings[0].createdAt) : 'No recent submissions'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Card: Latest Review time */}
-          <div className="bg-slate-900/30 border border-slate-850 p-6 rounded-2xl flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Clock size={24} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Latest Activity</h3>
-              <p className="text-xl font-bold text-white mt-0.5">
-                {ratings.length > 0 ? formatDate(ratings[0].createdAt) : 'No recent submissions'}
-              </p>
-            </div>
+          {/* Ratings Distribution Card */}
+          <div className="bg-slate-900/30 border border-slate-855 p-6 rounded-2xl shadow-xl hover:border-slate-800 transition">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Ratings Distribution</h3>
+            {renderDistributionChart()}
           </div>
         </div>
 

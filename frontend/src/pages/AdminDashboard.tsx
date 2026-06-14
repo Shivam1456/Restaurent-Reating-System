@@ -14,7 +14,13 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'stores'>('users');
 
   // Stats
-  const [stats, setStats] = useState({ totalUsers: 0, totalStores: 0, totalRatings: 0 });
+  const [stats, setStats] = useState<any>({
+    totalUsers: 0,
+    totalStores: 0,
+    totalRatings: 0,
+    roleCounts: { SYSTEM_ADMIN: 0, NORMAL_USER: 0, STORE_OWNER: 0 },
+    topStores: []
+  });
 
   // Delete User
   const handleDeleteUser = async (userId: number) => {
@@ -40,6 +46,8 @@ export const AdminDashboard: React.FC = () => {
   const [usersSortOrder, setUsersSortOrder] = useState<'asc' | 'desc'>('asc');
   const [usersPage, setUsersPage] = useState(1);
   const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [usersLimit, setUsersLimit] = useState(10);
+  const [usersTotal, setUsersTotal] = useState(0);
 
   // Stores Tab States
   const [stores, setStores] = useState<any[]>([]);
@@ -48,6 +56,8 @@ export const AdminDashboard: React.FC = () => {
   const [storesSortOrder, setStoresSortOrder] = useState<'asc' | 'desc'>('asc');
   const [storesPage, setStoresPage] = useState(1);
   const [storesTotalPages, setStoresTotalPages] = useState(1);
+  const [storesLimit, setStoresLimit] = useState(10);
+  const [storesTotal, setStoresTotal] = useState(0);
 
   // Modal States
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -85,11 +95,12 @@ export const AdminDashboard: React.FC = () => {
           sortBy: usersSortBy,
           sortOrder: usersSortOrder,
           page: usersPage,
-          limit: 8
+          limit: usersLimit
         }
       });
       setUsers(response.data.users);
       setUsersTotalPages(response.data.pagination.pages);
+      setUsersTotal(response.data.pagination.total);
     } catch (error) {
       console.error('Fetch users error:', error);
       toast.error('Failed to load users list.');
@@ -105,11 +116,12 @@ export const AdminDashboard: React.FC = () => {
           sortBy: storesSortBy,
           sortOrder: storesSortOrder,
           page: storesPage,
-          limit: 8
+          limit: storesLimit
         }
       });
       setStores(response.data.stores);
       setStoresTotalPages(response.data.pagination.pages);
+      setStoresTotal(response.data.pagination.total);
     } catch (error) {
       console.error('Fetch stores error:', error);
       toast.error('Failed to load stores list.');
@@ -140,7 +152,184 @@ export const AdminDashboard: React.FC = () => {
     } else {
       fetchStores();
     }
-  }, [activeTab, usersSearch, usersRoleFilter, usersSortBy, usersSortOrder, usersPage, storesSearch, storesSortBy, storesSortOrder, storesPage]);
+  }, [activeTab, usersSearch, usersRoleFilter, usersSortBy, usersSortOrder, usersPage, usersLimit, storesSearch, storesSortBy, storesSortOrder, storesPage, storesLimit]);
+
+  const renderDonutChart = () => {
+    const roles = stats.roleCounts || { SYSTEM_ADMIN: 0, NORMAL_USER: 0, STORE_OWNER: 0 };
+    const total = roles.SYSTEM_ADMIN + roles.NORMAL_USER + roles.STORE_OWNER;
+    
+    if (total === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-slate-500 bg-slate-950/20 rounded-2xl border border-slate-900/40">
+          <span>No user data available</span>
+        </div>
+      );
+    }
+
+    const data = [
+      { label: 'Admin', count: roles.SYSTEM_ADMIN, color: '#f43f5e' },
+      { label: 'Normal User', count: roles.NORMAL_USER, color: '#6366f1' },
+      { label: 'Store Owner', count: roles.STORE_OWNER, color: '#10b981' },
+    ];
+
+    const r = 36;
+    const circ = 2 * Math.PI * r;
+    let accumulatedPercent = 0;
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center gap-6 justify-center py-2">
+        <div className="relative w-32 h-32">
+          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+            {data.map((item, idx) => {
+              const pct = item.count / total;
+              const strokeDasharray = `${pct * circ} ${circ}`;
+              const strokeDashoffset = -accumulatedPercent * circ;
+              accumulatedPercent += pct;
+
+              if (item.count === 0) return null;
+
+              return (
+                <circle
+                  key={idx}
+                  cx="50"
+                  cy="50"
+                  r={r}
+                  fill="transparent"
+                  stroke={item.color}
+                  strokeWidth="12"
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-300 hover:stroke-[14] cursor-pointer"
+                />
+              );
+            })}
+            <circle cx="50" cy="50" r="29" className="fill-slate-900" />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-xl font-black text-white">{total}</span>
+            <span className="text-[8px] text-slate-500 uppercase tracking-widest font-extrabold">Total Users</span>
+          </div>
+        </div>
+        
+        <div className="flex flex-col gap-2">
+          {data.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 text-xs">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="font-semibold text-slate-400 w-24">{item.label}</span>
+              <span className="font-bold text-white w-8 text-right">{item.count}</span>
+              <span className="text-slate-500 font-medium">({total > 0 ? Math.round((item.count / total) * 100) : 0}%)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBarChart = () => {
+    const topStores = stats.topStores || [];
+
+    if (topStores.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-slate-500 bg-slate-950/20 rounded-2xl border border-slate-900/40">
+          <span>No rating data available</span>
+        </div>
+      );
+    }
+
+    const width = 360;
+    const height = 160;
+    const paddingLeft = 25;
+    const paddingBottom = 20;
+    const chartWidth = width - paddingLeft - 10;
+    const chartHeight = height - paddingBottom - 10;
+    const maxRating = 5;
+
+    const barWidth = 24;
+    const gap = (chartWidth - (topStores.length * barWidth)) / (topStores.length + 1);
+
+    return (
+      <div className="flex flex-col items-center w-full py-1">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+          <defs>
+            <linearGradient id="adminBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#818cf8" />
+              <stop offset="100%" stopColor="#4f46e5" />
+            </linearGradient>
+          </defs>
+
+          {/* Y-axis Grid Lines */}
+          {[0, 1.25, 2.5, 3.75, 5].map((val) => {
+            const y = chartHeight - (val / maxRating) * chartHeight + 10;
+            return (
+              <g key={val} className="opacity-40">
+                <line
+                  x1={paddingLeft}
+                  y1={y}
+                  x2={width - 10}
+                  y2={y}
+                  stroke="#1e293b"
+                  strokeWidth="1"
+                  strokeDasharray="2 4"
+                />
+                <text
+                  x={paddingLeft - 6}
+                  y={y + 3}
+                  fill="#64748b"
+                  fontSize="8"
+                  textAnchor="end"
+                  fontWeight="semibold"
+                >
+                  {val.toFixed(1)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Bars */}
+          {topStores.map((store: any, idx: number) => {
+            const barHeight = (store.averageRating / maxRating) * chartHeight;
+            const x = paddingLeft + gap + idx * (barWidth + gap);
+            const y = chartHeight - barHeight + 10;
+
+            return (
+              <g key={idx} className="group cursor-pointer">
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.max(barHeight, 4)}
+                  rx="3"
+                  fill="url(#adminBarGrad)"
+                  className="transition-all duration-300 hover:opacity-90"
+                />
+                <text
+                  x={x + barWidth / 2}
+                  y={y - 4}
+                  fill="#ffffff"
+                  fontSize="8"
+                  fontWeight="black"
+                  textAnchor="middle"
+                >
+                  {store.averageRating}
+                </text>
+                <text
+                  x={x + barWidth / 2}
+                  y={chartHeight + 18}
+                  fill="#94a3b8"
+                  fontSize="8"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  {store.name.length > 8 ? `${store.name.substring(0, 7)}…` : store.name}
+                  <title>{store.name} ({store.totalRatings} ratings)</title>
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    );
+  };
 
   // Handle Sorts
   const handleUsersSort = (field: string) => {
@@ -294,6 +483,21 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Donut Chart Card */}
+          <div className="bg-slate-900/40 border border-slate-800 backdrop-blur-xl rounded-2xl p-6 shadow-xl">
+            <h3 className="text-base font-bold text-white mb-2 uppercase tracking-wider">User Distribution by Role</h3>
+            {renderDonutChart()}
+          </div>
+
+          {/* Bar Chart Card */}
+          <div className="bg-slate-900/40 border border-slate-800 backdrop-blur-xl rounded-2xl p-6 shadow-xl">
+            <h3 className="text-base font-bold text-white mb-2 uppercase tracking-wider">Top 5 Highest Rated Stores</h3>
+            {renderBarChart()}
+          </div>
+        </div>
+
         {/* Tab Buttons */}
         <div className="border-b border-slate-800 flex gap-4">
           <button
@@ -335,7 +539,7 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
               {/* Role filter */}
-              <div className="relative min-w-[200px]">
+              <div className="relative min-w-[180px]">
                 <Filter className="absolute left-3.5 top-3 text-slate-500" size={16} />
                 <select
                   value={usersRoleFilter}
@@ -346,6 +550,20 @@ export const AdminDashboard: React.FC = () => {
                   <option value="SYSTEM_ADMIN">System Admin</option>
                   <option value="NORMAL_USER">Normal User</option>
                   <option value="STORE_OWNER">Store Owner</option>
+                </select>
+              </div>
+              {/* Limit selector */}
+              <div className="flex items-center gap-2 shrink-0 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1 bg-opacity-40">
+                <span className="text-xs text-slate-500">Page Size:</span>
+                <select
+                  value={usersLimit}
+                  onChange={(e) => { setUsersLimit(Number(e.target.value)); setUsersPage(1); }}
+                  className="bg-transparent border-none py-1.5 text-xs text-white focus:outline-none focus:ring-0"
+                >
+                  <option value={5} className="bg-slate-900 text-white">5</option>
+                  <option value={10} className="bg-slate-900 text-white">10</option>
+                  <option value={20} className="bg-slate-900 text-white">20</option>
+                  <option value={50} className="bg-slate-900 text-white">50</option>
                 </select>
               </div>
             </div>
@@ -433,25 +651,32 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* User Pagination */}
-            {usersTotalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-4">
-                <button
-                  disabled={usersPage === 1}
-                  onClick={() => setUsersPage(prev => Math.max(prev - 1, 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition"
-                >
-                  Prev
-                </button>
-                <span className="flex items-center text-sm font-semibold text-slate-300 px-2">
-                  Page {usersPage} of {usersTotalPages}
+            {usersTotal > 0 && (
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mt-4 bg-slate-900/10 p-3 rounded-xl border border-slate-850/60">
+                <span className="text-xs text-slate-500">
+                  Showing <span className="font-bold text-slate-300">{Math.min((usersPage - 1) * usersLimit + 1, usersTotal)}</span> to <span className="font-bold text-slate-300">{Math.min(usersPage * usersLimit, usersTotal)}</span> of <span className="font-bold text-slate-300">{usersTotal}</span> users
                 </span>
-                <button
-                  disabled={usersPage === usersTotalPages}
-                  onClick={() => setUsersPage(prev => Math.min(prev + 1, usersTotalPages))}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition"
-                >
-                  Next
-                </button>
+                {usersTotalPages > 1 && (
+                  <div className="flex gap-2">
+                    <button
+                      disabled={usersPage === 1}
+                      onClick={() => setUsersPage(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1 text-xs rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition active:scale-95"
+                    >
+                      Prev
+                    </button>
+                    <span className="flex items-center text-xs font-semibold px-2 text-slate-400">
+                      Page {usersPage} of {usersTotalPages}
+                    </span>
+                    <button
+                      disabled={usersPage === usersTotalPages}
+                      onClick={() => setUsersPage(prev => Math.min(prev + 1, usersTotalPages))}
+                      className="px-3 py-1 text-xs rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition active:scale-95"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -468,6 +693,20 @@ export const AdminDashboard: React.FC = () => {
                   onChange={(e) => { setStoresSearch(e.target.value); setStoresPage(1); }}
                   className="w-full bg-slate-950 border border-slate-850 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 />
+              </div>
+              {/* Limit selector */}
+              <div className="flex items-center gap-2 shrink-0 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1 bg-opacity-40">
+                <span className="text-xs text-slate-500">Page Size:</span>
+                <select
+                  value={storesLimit}
+                  onChange={(e) => { setStoresLimit(Number(e.target.value)); setStoresPage(1); }}
+                  className="bg-transparent border-none py-1.5 text-xs text-white focus:outline-none focus:ring-0"
+                >
+                  <option value={5} className="bg-slate-900 text-white">5</option>
+                  <option value={10} className="bg-slate-900 text-white">10</option>
+                  <option value={20} className="bg-slate-900 text-white">20</option>
+                  <option value={50} className="bg-slate-900 text-white">50</option>
+                </select>
               </div>
             </div>
 
@@ -520,25 +759,32 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Stores Pagination */}
-            {storesTotalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-4">
-                <button
-                  disabled={storesPage === 1}
-                  onClick={() => setStoresPage(prev => Math.max(prev - 1, 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition"
-                >
-                  Prev
-                </button>
-                <span className="flex items-center text-sm font-semibold text-slate-300 px-2">
-                  Page {storesPage} of {storesTotalPages}
+            {storesTotal > 0 && (
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mt-4 bg-slate-900/10 p-3 rounded-xl border border-slate-850/60">
+                <span className="text-xs text-slate-500">
+                  Showing <span className="font-bold text-slate-300">{Math.min((storesPage - 1) * storesLimit + 1, storesTotal)}</span> to <span className="font-bold text-slate-300">{Math.min(storesPage * storesLimit, storesTotal)}</span> of <span className="font-bold text-slate-300">{storesTotal}</span> stores
                 </span>
-                <button
-                  disabled={storesPage === storesTotalPages}
-                  onClick={() => setStoresPage(prev => Math.min(prev + 1, storesTotalPages))}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition"
-                >
-                  Next
-                </button>
+                {storesTotalPages > 1 && (
+                  <div className="flex gap-2">
+                    <button
+                      disabled={storesPage === 1}
+                      onClick={() => setStoresPage(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1 text-xs rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition active:scale-95"
+                    >
+                      Prev
+                    </button>
+                    <span className="flex items-center text-xs font-semibold px-2 text-slate-400">
+                      Page {storesPage} of {storesTotalPages}
+                    </span>
+                    <button
+                      disabled={storesPage === storesTotalPages}
+                      onClick={() => setStoresPage(prev => Math.min(prev + 1, storesTotalPages))}
+                      className="px-3 py-1 text-xs rounded-lg border border-slate-800 bg-slate-900 disabled:opacity-40 hover:border-slate-700 transition active:scale-95"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
