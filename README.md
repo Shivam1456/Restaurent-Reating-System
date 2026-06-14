@@ -3,6 +3,21 @@
 A premium, full-stack Store Rating System built with **Express (TypeScript) + Prisma (PostgreSQL)** on the backend and **Vite (React + TypeScript) + Tailwind CSS v4** on the frontend. It features three distinct user roles, interactive visual analytics charts rendered natively via SVGs, server-side pagination, searching, sorting, and robust validation.
 
 ---
+https://frontend-a0mnwl8kq-ashu912012gmailcoms-projects.vercel.app/
+https://frontend-dun-chi-79.vercel.app/admin
+
+<img width="1920" height="1080" alt="Screenshot (60)" src="https://github.com/user-attachments/assets/59bb2a67-ceb2-48e3-be28-e2a2536c563a" />
+<img width="1920" height="1080" alt="Screenshot (61)" src="https://github.com/user-attachments/assets/6c23f802-7748-429a-a5aa-ce73294230d0" />
+
+<img width="1920" height="1080" alt="Screenshot (62)" src="https://github.com/user-attachments/assets/a6e80c49-c8ef-454a-994b-c03bafe0d797" />
+<img width="1920" height="1080" alt="Screenshot (63)" src="https://github.com/user-attachments/assets/a814c536-1a15-46fa-ba80-87c6f121ff8c" />
+<img width="1920" height="1080" alt="Screenshot (64)" src="https://github.com/user-attachments/assets/d5ef78aa-1368-4141-9ec2-135673ca48f4" />
+<img width="1920" height="1080" alt="Screenshot (65)" src="https://github.com/user-attachments/assets/cec42d2e-be9d-409b-929f-7832837cfaf3" />
+<img width="1920" height="1080" alt="Screenshot (66)" src="https://github.com/user-attachments/assets/81cdbc60-b5b6-4334-8b91-75abcea13801" />
+<img width="1920" height="1080" alt="Screenshot (67)" src="https://github.com/user-attachments/assets/c68fedd1-fdf2-4362-865b-27ffa2a653c3" />
+<img width="1920" height="1080" alt="Screenshot (68)" src="https://github.com/user-attachments/assets/026d0d54-ac50-4d30-bef4-798c58d3ba49" />
+<img width="1920" height="1080" alt="Screenshot (69)" src="https://github.com/user-attachments/assets/889cffbe-06d8-4d9a-b8ce-40aba94277d1" />
+<img width="1920" height="1080" alt="Screenshot (70)" src="https://github.com/user-attachments/assets/35d21868-c9e5-41be-b57c-89f72b37acdc" />
 
 ## 🚀 Key Features
 
